@@ -157,7 +157,7 @@ SERVICE_OUTPUTS = [
     Input("submitA","click")
 ]
 
-inInputs = [
+HOST_INPUTS = [
     Input("host_name","text"),
     Input("dupSvTplAssoc[dupSvTplAssoc]","radio"),
     Input("host_notifOpts[u]","checkBox"),
@@ -165,7 +165,7 @@ inInputs = [
     Input("host_cgs-t[]","autocomplete")
 ]
 
-outInputs = [
+HOST_OUTPUTS = [
     Input("host_name","text"),
     Input("dupSvTplAssoc","radio"),
     Input("host_notifOpts[u]","checkBox"),
