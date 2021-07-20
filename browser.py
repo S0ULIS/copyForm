@@ -201,6 +201,17 @@ class browser:
                     self.urls.append(element.get_attribute('href'))
         
         return self.urls[self.item_offset:]
+    
+    def get_all_Services_Urls(self,numPages):
+        result = set()
+        for i in range(0,numPages):
+            print("Leyendo página {i}")
+            self.driver.get("http://boreal.dipusevilla.es/boreal/main.php?p=60201&num={}&limit=30&poller=&template=0&search=&type=&o=&search_type_service=1&search_type_host=1&status=&hostgroups=0".format(i))
+            wait(DELAY)
+            urls = [url.get_attribute("href") for url in self.driver.find_elements_by_css_selector("td.ListColLeft a") if check_service_pattern(url.get_attribute("href"))]
+            result.update(set(urls))
+        return result
+
 
     def get_Services_Urls(self):
         last_host = ""
@@ -293,12 +304,12 @@ class browser:
                 search_bar_input = [sb for sb in search_bar if len(sb.find_elements_by_tag_name("input"))>0][0].find_element_by_tag_name("input")
                 for i in range(0,len(value)):
                     search_bar_input.send_keys(value[i])
-                    wait(1)
+                    wait(2)
                     search_bar_input.send_keys(Keys.ENTER)
                     if i <len(value)-1:
-                        wait(1)
+                        wait(2)
                         search_bar_input.send_keys("a")
-                        wait(1)
+                        wait(2)
                         search_bar_input.send_keys(Keys.BACKSPACE*(len(value[i])))
 
             elif type == "click":
@@ -328,7 +339,7 @@ class browser:
     def create_Host(self,data):
         self.driver.get(self.base+"main.php?p=60101&o=a")
         wait(DELAY)
-        for oinp in outInputs:
+        for oinp in HOST_OUTPUTS:
             self.set_Input_Value(oinp.name,oinp.type,data[oinp.name])
         self.item_offset+=1
             
@@ -341,7 +352,7 @@ class browser:
         values = {}
         self.driver.get(url)
         wait(DELAY)
-        for inp in inInputs:
+        for inp in HOST_INPUTS:
             values[inp.name] = self.get_Input_Value(inp.name,inp.type)
         return values
 
@@ -367,8 +378,12 @@ class browser:
         self.item_offset+=1
     
     def create_Services(self,data):
+        count = 0
         for service in data:
+            if(count%10 == 0 and count > 0):
+                print("[+] {}%".format(round(100*count/len(data),2)))
             self.create_Service(service)
+            count += 1
 
     def get_Service_Information(self,url):
         values = {}
@@ -378,13 +393,17 @@ class browser:
             values[inp.name] = self.get_Input_Value(inp.name,inp.type)
         return values
 
-    def get_Services_Information(self):
-        self.get_Services_Urls()
+    def get_Services_Information(self, urls):
+        
         result = []
-        for (host,url) in self.urls:
+        count = 0
+        for (host,url) in urls:
+            if count % 10==0 and count>0:
+                print("[+] {}%".format(round(100*count/len(urls),2)))
             service = self.get_Service_Information(url)
             service["host_name"] = host
             result.append(service)
+            count += 1
         return result
     
     

@@ -34,7 +34,7 @@ if __name__=="__main__":
     br2 = browser("http://centreon2/centreon/")
     
     while i<NUM_PAGES:
-        data = br1.get_Services_Information()
+        data = br1.get_Services_Information(br1.get_Services_Urls())
         #print(data)
         
         
