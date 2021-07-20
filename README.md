@@ -4,8 +4,11 @@ A python tool for copying forms beetwen two pages with different versions of Cen
 
 Usage:
 br = browser("YOUR_URL",page_number=0,item_offset=0) #You can choose the page and item (host or service) where it starts copying
+
 data = br.get_Services_Information()
+
 br.create_Services(data)
+
 br.next_service_page()
 
 
