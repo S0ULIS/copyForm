@@ -322,6 +322,8 @@ class browser:
             if not "ARG" in name:
                 print(e)
                 return False
+            else:
+                return True
 
     def create_Host(self,data):
         self.driver.get(self.base+"main.php?p=60101&o=a")

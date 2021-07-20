@@ -30,8 +30,8 @@ def get_done_services(data):
 
 if __name__=="__main__":
     i = 0
-    br1 = browser("http://boreal.dipusevilla.es/boreal/main.php?p=601",page_number=0,item_offset=4)
-    br2 = browser("http://10.1.255.50/centreon/")
+    br1 = browser("http://centreon1/main.php?p=601",page_number=0,item_offset=4)
+    br2 = browser("http://centreon2/centreon/")
     
     while i<NUM_PAGES:
         data = br1.get_Services_Information()
