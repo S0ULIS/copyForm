@@ -1,7 +1,7 @@
 from browser import browser
 import json
 
-OFFSET = 0
+OFFSET = 49
 
 if __name__ == "__main__":
     with open("data.json", "r") as f:

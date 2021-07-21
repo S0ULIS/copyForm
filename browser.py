@@ -1,9 +1,8 @@
-from socket import MsgFlag
-from typing import NamedTuple
 from selenium import webdriver
+from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
-import re
 import time
 from collections import namedtuple
 from selenium.webdriver.support.select import Select
@@ -266,9 +265,16 @@ class browser:
         try:
             nname = differents[name] if name in differents else name # nname = new name
             if type=="text" and value!="": # value constains text
-                element = WebDriverWait(self.driver,10).until(lambda d: d.find_element_by_css_selector("input[name='{}']".format(nname)))
-                #element = self.driver.find_element_by_css_selector("input[name='{}']".format(nname))
-                element.send_keys(value)
+                try:
+                    if not "ARG" in nname:
+                        element = WebDriverWait(self.driver,10).until(lambda d: d.find_element_by_css_selector("input[name='{}']".format(nname)))
+                    else:
+                        element = WebDriverWait(self.driver,1).until(lambda d: d.find_element_by_css_selector("input[name='{}']".format(nname)))
+                        
+                    #element = self.driver.find_element_by_css_selector("input[name='{}']".format(nname))
+                    element.send_keys(value)
+                except:
+                        pass
             elif type=="radio": # value contains the value of the one that was previously checked
                 radioBtns = self.driver.find_elements_by_name(nname)
                 element = [r for r in radioBtns if r.get_attribute("value")==value][0]
@@ -278,16 +284,16 @@ class browser:
                     element = self.driver.find_element_by_name(nname)
                     self.driver.execute_script("document.getElementById('{}').click()".format(element.get_attribute("id")))
             elif type == "select":
-                
-                select = WebDriverWait(self.driver,10).until(lambda d: d.find_element_by_name(nname))
-                parent = self.driver.execute_script("return arguments[0].parentNode;",select)
-                parent.find_element_by_class_name("select2-container").click()
+                if (len(value)>1):
+                    select = WebDriverWait(self.driver,10).until(lambda d: d.find_element_by_name(nname))
+                    parent = self.driver.execute_script("return arguments[0].parentNode;",select)
+                    parent.find_element_by_class_name("select2-container").click()
 
-                search_bar = WebDriverWait(self.driver,10).until(lambda d: d.find_elements_by_class_name("select2-container--open"))
-                search_bar_input = [sb for sb in search_bar if len(sb.find_elements_by_tag_name("input"))>0][0].find_element_by_tag_name("input")
-                search_bar_input.send_keys(value)
-                wait(1)
-                search_bar_input.send_keys(Keys.ENTER)
+                    search_bar = WebDriverWait(self.driver,10).until(lambda d: d.find_elements_by_class_name("select2-container--open"))
+                    search_bar_input = [sb for sb in search_bar if len(sb.find_elements_by_tag_name("input"))>0][0].find_element_by_tag_name("input")
+                    search_bar_input.send_keys(value)
+                    wait(1)
+                    search_bar_input.send_keys(Keys.ENTER)
 
             elif type=="autocomplete":
                 value = value[0]
@@ -298,19 +304,21 @@ class browser:
                 else:
                     select = WebDriverWait(self.driver,10).until(lambda d: d.find_element_by_name(nname))
                 parent = self.driver.execute_script("return arguments[0].parentNode;",select)
-                parent.find_element_by_class_name("select2-container").click()
+                clickable = WebDriverWait(parent, 10).until(lambda d: d.find_element_by_css_selector("span.select2-container"))
+                clickable.click()
 
-                search_bar = WebDriverWait(self.driver,10).until(lambda d: d.find_elements_by_class_name("select2-container--open"))
-                search_bar_input = [sb for sb in search_bar if len(sb.find_elements_by_tag_name("input"))>0][0].find_element_by_tag_name("input")
+                search_bar_input = WebDriverWait(parent,10).until(lambda d: d.find_element_by_css_selector("input.select2-search__field"))
                 for i in range(0,len(value)):
-                    search_bar_input.send_keys(value[i])
-                    wait(2)
-                    search_bar_input.send_keys(Keys.ENTER)
-                    if i <len(value)-1:
+                    if(len(value[i])>1):
+                        search_bar_input.send_keys(value[i])
                         wait(2)
-                        search_bar_input.send_keys("a")
-                        wait(2)
-                        search_bar_input.send_keys(Keys.BACKSPACE*(len(value[i])))
+                        search_bar_input.send_keys(Keys.ENTER)
+                        if i <len(value)-1:
+                            wait(2)
+                            search_bar_input.send_keys("a")
+                            wait(2)
+                            search_bar_input.send_keys(Keys.BACKSPACE*(len(value[i])))
+                search_bar_input.send_keys(Keys.ESCAPE)
 
             elif type == "click":
                 if "li#c" in nname:
@@ -319,6 +327,9 @@ class browser:
                 elif "submitA" == nname:
                     self.driver.execute_script("document.getElementsByName('submitA')[0].click();")
                     wait(DELAY)
+                    if "http://10.1.255.50/centreon/main.php?p=60201&o=a" in self.driver.current_url:
+                        print("[-] Error al guardar último Host")
+                        pause()
                 else:
                     self.driver.find_element_by_name(nname)
                 wait(0.5)
@@ -381,7 +392,7 @@ class browser:
         count = 0
         for service in data:
             if(count%10 == 0 and count > 0):
-                print("[+] {}%".format(round(100*count/len(data),2)))
+                print("[{}] {}%".format(count,round(100*count/len(data),2)))
             self.create_Service(service)
             count += 1
 
