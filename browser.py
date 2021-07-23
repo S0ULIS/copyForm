@@ -212,6 +212,19 @@ class browser:
         return result
 
 
+    def get_all_new_Services_Urls(self,start,numPages):
+        result = set()
+        for i in range(start,numPages):
+            print("Leyendo página {}".format(i))
+            self.driver.get("http://10.1.255.50/centreon/main.php?p=60201&num={}".format(i))
+            wait(DELAY)
+            iframe = WebDriverWait(self.driver,30).until(lambda d: d.find_element_by_id("main-content"))
+            self.driver.switch_to.frame(iframe)
+            urls = [url.get_attribute("href") for url in self.driver.find_elements_by_css_selector("td.ListColLeft a") if check_service_pattern(url.get_attribute("href"))]
+            result.update(set(urls))
+            print(len(set(urls)))
+        return result
+
     def get_Services_Urls(self):
         last_host = ""
         self.driver.get("http://boreal.dipusevilla.es/boreal/main.php?p=60201&num={}&limit=30&poller=&template=0&search=&type=&o=&search_type_service=1&search_type_host=1&status=&hostgroups=0".format(self.page_number))
@@ -231,6 +244,7 @@ class browser:
 
     def get_Input_Value(self,name,type):
         try:
+            result = None
             if type == "text":
                 result = None
                 if(len(self.driver.find_elements_by_xpath("//input[@name='{}']".format(name)))>0):
@@ -243,18 +257,25 @@ class browser:
             elif type == "checkBox":
                 result = self.driver.find_element_by_name(name).is_selected()
             elif type == "autocomplete":
-                select = Select(self.driver.find_element_by_name(name))
+                if name == "service_traps-t[]":
+                    select = Select(self.driver.find_element_by_id("service_traps"))
+                elif name == "service_categories-t[]":
+                    select = Select(self.driver.find_element_by_id("service_categories"))
+                else:
+                    select = Select(self.driver.find_element_by_name(name))
                 result = [[element.text for element in select.options]]
             elif type == "select":
                 select = Select(self.driver.find_element_by_xpath("//select[@name='{}']".format(name)))
                 result = select.first_selected_option.text
-            elif type == "click":
+            elif type == "click" and name != "submitA":
                 self.driver.find_element_by_css_selector(name).click()
                 wait(0.5)
                 result = True
 
             if name=="service_description":
                 print("[+] Leyendo {}".format(result))
+
+            print("({}, {})".format(name,result))
             #pause()
             return result
         except:
@@ -292,7 +313,7 @@ class browser:
                     search_bar = WebDriverWait(self.driver,10).until(lambda d: d.find_elements_by_class_name("select2-container--open"))
                     search_bar_input = [sb for sb in search_bar if len(sb.find_elements_by_tag_name("input"))>0][0].find_element_by_tag_name("input")
                     search_bar_input.send_keys(value)
-                    wait(1)
+                    wait(DELAY/2)
                     search_bar_input.send_keys(Keys.ENTER)
 
             elif type=="autocomplete":
@@ -311,12 +332,12 @@ class browser:
                 for i in range(0,len(value)):
                     if(len(value[i])>1):
                         search_bar_input.send_keys(value[i])
-                        wait(2)
+                        wait(DELAY/2)
                         search_bar_input.send_keys(Keys.ENTER)
                         if i <len(value)-1:
-                            wait(2)
+                            wait(DELAY/2)
                             search_bar_input.send_keys("a")
-                            wait(2)
+                            wait(DELAY/2)
                             search_bar_input.send_keys(Keys.BACKSPACE*(len(value[i])))
                 search_bar_input.send_keys(Keys.ESCAPE)
 
@@ -327,9 +348,7 @@ class browser:
                 elif "submitA" == nname:
                     self.driver.execute_script("document.getElementsByName('submitA')[0].click();")
                     wait(DELAY)
-                    if "http://10.1.255.50/centreon/main.php?p=60201&o=a" in self.driver.current_url:
-                        print("[-] Error al guardar último Host")
-                        pause()
+                    
                 else:
                     self.driver.find_element_by_name(nname)
                 wait(0.5)
@@ -377,7 +396,8 @@ class browser:
     def create_Service(self,data):
         self.driver.get(self.base+"main.php?p=60201&o=a")
         wait(DELAY)
-        self.driver.switch_to.frame(self.driver.find_element_by_id("main-content"))
+        iframe = WebDriverWait(self.driver,10).until(lambda d: d.find_element_by_id("main-content"))
+        self.driver.switch_to.frame(iframe)
         for oinp in SERVICE_OUTPUTS:
             if not oinp.name in data and oinp.type == "click":
                 result = self.set_Input_Value(oinp.name,oinp.type,None)
@@ -403,6 +423,24 @@ class browser:
         for inp in SERVICE_INPUTS:
             values[inp.name] = self.get_Input_Value(inp.name,inp.type)
         return values
+    
+    def get_new_Service_Information(self,url):
+        values = {}
+        self.driver.get(url.replace('"\'',"").replace('\'"',""))
+        wait(DELAY)
+        try:
+            iframe = WebDriverWait(self.driver,30).until(lambda d: d.find_element_by_id("main-content"))
+            self.driver.switch_to.frame(iframe)
+        except:
+            print("[+] Error iframe")
+            pause()
+            iframe = WebDriverWait(self.driver,30).until(lambda d: d.find_element_by_id("main-content"))
+            self.driver.switch_to.frame(iframe)
+        for inp in SERVICE_OUTPUTS:
+            nname = differents[inp.name] if inp.name in differents else inp.name # nname = new name
+            values[inp.name] = self.get_Input_Value(nname,inp.type)
+        print(values)
+        return values
 
     def get_Services_Information(self, urls):
         
@@ -417,7 +455,18 @@ class browser:
             count += 1
         return result
     
-    
+    def get_new_Services_Information(self, urls):
+        result = []
+        count = 0
+        for url in urls:
+            if count % 10==0 and count>0:
+                print("[+] {}%".format(round(100*count/len(urls),2)))
+            service = self.get_new_Service_Information(url)
+            service["link"] = url
+            result.append(service)
+            count += 1
+        return result
+
     def next_host_page(self):
         self.page_number += 1
         self.item_offset = 0

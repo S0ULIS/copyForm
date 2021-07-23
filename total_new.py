@@ -4,16 +4,16 @@ import json
 if __name__ == "__main__":
     br = browser("http://10.1.255.50/centreon/main.php?p=60201")
     try:
-        with open("urls.txt","r") as f:
+        with open("urls2.txt","r") as f:
             result = f.read().replace("{","").replace("}","").split(", ")
     except:
-        result = br.get_all_Services_Urls(115)
+        result = br.get_all_new_Services_Urls(0,52)
+        with open("urls2.txt", "w") as f:
+            f.write(str(result))
     print(len(result))
-    with open("urls2.txt", "w") as f:
-        f.write(str(result))
-    dics = br.get_Services_Information([("aaa", l) for l in result])
+    
+    result = result[:988]
+    dics = br.get_new_Services_Information(result)
     with open("data.json", "w") as f:
         f.write(json.dumps(dics))
-
-    print(result)
-    print(len(result))
+    print("[+] Finalizado con éxito")
